@@ -1,16 +1,12 @@
 package org.itentika.edu.spuzakov.mvc.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import liquibase.integration.spring.SpringLiquibase;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.*;
 import org.springframework.dao.annotation.PersistenceExceptionTranslationPostProcessor;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
-import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
-import org.springframework.orm.hibernate5.LocalSessionFactoryBean;
 import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.orm.jpa.JpaVendorAdapter;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
@@ -19,14 +15,13 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 import javax.sql.DataSource;
-import java.text.SimpleDateFormat;
 import java.util.Properties;
 
 @Configuration
 @EnableJpaRepositories(basePackages = "org.itentika.edu.spuzakov.mvc.persistence.dao")
 @EnableTransactionManagement
 @ComponentScan(basePackages = "org.itentika.edu.spuzakov.mvc")
-@PropertySource(value= {"classpath:application.properties"})
+@PropertySource(value = {"classpath:application.properties"})
 public class JavaConfig {
 
     @Bean(name = "embeddedDataSource")
@@ -53,7 +48,7 @@ public class JavaConfig {
     }
 
     @DependsOn("liquibase")
-    @Bean(name = "entityManager")
+    @Bean(name = "entityManagerFactory")
     public LocalContainerEntityManagerFactoryBean entityManagerFactory(@Qualifier("embeddedDataSource") DataSource dataSource) {
         LocalContainerEntityManagerFactoryBean em = new LocalContainerEntityManagerFactoryBean();
         em.setDataSource(dataSource);
@@ -67,16 +62,16 @@ public class JavaConfig {
         return em;
     }
 
-    @DependsOn("entityManager")
+    @DependsOn("entityManagerFactory")
     @Bean
-    public PlatformTransactionManager transactionManager(@Autowired LocalContainerEntityManagerFactoryBean entityManagerFactory) {
+    public PlatformTransactionManager transactionManager(@Qualifier("entityManagerFactory") LocalContainerEntityManagerFactoryBean entityManagerFactory) {
         JpaTransactionManager jpaTransactionManager = new JpaTransactionManager();
         jpaTransactionManager.setEntityManagerFactory(entityManagerFactory.getObject());
         return jpaTransactionManager;
     }
 
     @Bean
-    public PersistenceExceptionTranslationPostProcessor exceptionTranslation(){
+    public PersistenceExceptionTranslationPostProcessor exceptionTranslation() {
         return new PersistenceExceptionTranslationPostProcessor();
     }
 

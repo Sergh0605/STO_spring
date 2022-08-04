@@ -6,7 +6,6 @@ import org.springframework.web.context.support.AnnotationConfigWebApplicationCon
 import org.springframework.web.servlet.DispatcherServlet;
 
 import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
 import javax.servlet.ServletRegistration;
 
 public class WebAppInitializer implements WebApplicationInitializer {
@@ -24,7 +23,7 @@ public class WebAppInitializer implements WebApplicationInitializer {
 
         ServletRegistration.Dynamic registration = servletContext.addServlet("app", servlet);
         registration.setLoadOnStartup(1);
-        registration.addMapping("/app/*");
+        registration.addMapping("/sto/*");
 
         servletContext.addFilter("customRequestLoggingFilter",
                         CustomRequestLoggingFilter.class)
