@@ -29,4 +29,8 @@ public class Client {
 
     @Column(name = "birthdate")
     private LocalDate birthDate;
+
+    @Column(name = "address")
+    @Lob
+    private String address;
 }

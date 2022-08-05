@@ -44,6 +44,9 @@
             <column name="birthdate" type="date">
                 <constraints nullable="true"/>
             </column>
+            <column name="address" type="text">
+                <constraints nullable="true"/>
+            </column>
         </createTable>
     </changeSet>
     <changeSet id="create_order_status_table" author="S.Puzakov">
@@ -78,9 +81,6 @@
             </column>
             <column name="position_id" type="bigint">
                 <constraints nullable="false"/>
-            </column>
-            <column name="master_id" type="bigint">
-                <constraints nullable="true"/>
             </column>
         </createTable>
     </changeSet>

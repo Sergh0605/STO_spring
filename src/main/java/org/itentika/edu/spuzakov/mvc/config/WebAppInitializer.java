@@ -23,7 +23,7 @@ public class WebAppInitializer implements WebApplicationInitializer {
 
         ServletRegistration.Dynamic registration = servletContext.addServlet("app", servlet);
         registration.setLoadOnStartup(1);
-        registration.addMapping("/sto/*");
+        registration.addMapping("/*");
 
         servletContext.addFilter("customRequestLoggingFilter",
                         CustomRequestLoggingFilter.class)

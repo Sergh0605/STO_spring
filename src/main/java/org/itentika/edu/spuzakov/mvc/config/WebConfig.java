@@ -2,6 +2,7 @@ package org.itentika.edu.spuzakov.mvc.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.itentika.edu.spuzakov.mvc.converter.ClientClientDto;
+import org.itentika.edu.spuzakov.mvc.converter.OrderDtoOrder;
 import org.itentika.edu.spuzakov.mvc.converter.OrderOrderDto;
 import org.itentika.edu.spuzakov.mvc.dto.OrderDto;
 import org.springframework.context.annotation.Bean;
@@ -40,6 +41,7 @@ public class WebConfig extends WebMvcConfigurationSupport {
     protected void addFormatters(FormatterRegistry registry) {
         registry.addConverter(new ClientClientDto());
         registry.addConverter(new OrderOrderDto());
+        registry.addConverter(new OrderDtoOrder());
         super.addFormatters(registry);
     }
 }

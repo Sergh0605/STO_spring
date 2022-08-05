@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.0.xsd">
+    <changeSet id="add_units" author="S.Puzakov">
+        <sqlFile path="sql_scripts/insert_units.sql" relativeToChangelogFile="true"/>
+    </changeSet>
+    <changeSet id="add_positions" author="S.Puzakov">
+        <sqlFile path="sql_scripts/insert_positions.sql" relativeToChangelogFile="true"/>
+    </changeSet>
+    <changeSet id="add_price_items" author="S.Puzakov">
+        <sqlFile path="sql_scripts/insert_price_items.sql" relativeToChangelogFile="true"/>
+    </changeSet>
+    <changeSet id="add_staff" author="S.Puzakov">
+        <sqlFile path="sql_scripts/insert_staff.sql" relativeToChangelogFile="true"/>
+    </changeSet>
+</databaseChangeLog>
