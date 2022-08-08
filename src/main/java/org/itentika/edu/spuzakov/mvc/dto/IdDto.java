@@ -9,9 +9,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Data
 @Builder
-public class StaffDto {
+public class IdDto {
     private Long id;
-    private String name;
-    private String phone;
-    private PositionDto position;
 }

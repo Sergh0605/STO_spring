@@ -16,7 +16,6 @@ public class ClientDto {
     private Long id;
     private String name;
     private String phone;
-    private ClientDto client;
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate birthDate;
     private String address;

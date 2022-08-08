@@ -21,7 +21,7 @@ import java.util.Properties;
 @EnableJpaRepositories(basePackages = "org.itentika.edu.spuzakov.mvc.persistence.dao")
 @EnableTransactionManagement
 @ComponentScan(basePackages = "org.itentika.edu.spuzakov.mvc")
-@PropertySource(value = {"classpath:application.properties"})
+@PropertySource(value = {"classpath:application.properties"}, encoding = "UTF-8")
 public class JavaConfig {
 
     @Bean(name = "embeddedDataSource")
@@ -34,6 +34,10 @@ public class JavaConfig {
         dataSource.setUrl(dataSourceUrl);
         dataSource.setUsername(userName);
         dataSource.setPassword(password);
+        Properties connectionProperties = new Properties();
+        connectionProperties.setProperty("useUnicode", "yes");
+        connectionProperties.setProperty("characterEncoding", "UTF-8");
+        dataSource.setConnectionProperties(connectionProperties);
         return dataSource;
     }
 

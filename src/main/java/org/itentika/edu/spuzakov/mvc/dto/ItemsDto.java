@@ -5,13 +5,12 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
 @Builder
-public class StaffDto {
-    private Long id;
-    private String name;
-    private String phone;
-    private PositionDto position;
+public class ItemsDto {
+    private List<OrderItemDto> items;
 }

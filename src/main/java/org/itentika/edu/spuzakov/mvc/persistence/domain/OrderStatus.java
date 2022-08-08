@@ -31,7 +31,7 @@ public class OrderStatus {
 
     @Column(name = "create_date")
     @CreationTimestamp
-    private LocalDateTime create_date;
+    private LocalDateTime createDate;
 
     @ManyToOne
     @JoinColumn(name = "order_id", nullable = false)

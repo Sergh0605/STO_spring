@@ -14,6 +14,7 @@ public class ClientClientDto implements Converter<Client, ClientDto> {
                 .name(source.getName())
                 .phone(source.getPhone())
                 .birthDate(source.getBirthDate())
+                .address(source.getAddress())
                 .build();
     }
 }

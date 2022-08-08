@@ -1,9 +1,10 @@
 package org.itentika.edu.spuzakov.mvc.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.itentika.edu.spuzakov.mvc.converter.ClientClientDto;
-import org.itentika.edu.spuzakov.mvc.converter.OrderDtoOrder;
-import org.itentika.edu.spuzakov.mvc.converter.OrderOrderDto;
+import org.itentika.edu.spuzakov.mvc.converter.*;
+import org.itentika.edu.spuzakov.mvc.dto.ExOrderStatusDto;
+import org.itentika.edu.spuzakov.mvc.dto.IdDto;
+import org.itentika.edu.spuzakov.mvc.dto.ItemsDto;
 import org.itentika.edu.spuzakov.mvc.dto.OrderDto;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -34,6 +35,9 @@ public class WebConfig extends WebMvcConfigurationSupport {
     protected void configureMessageConverters(List<HttpMessageConverter<?>> converters) {
         MappingJackson2HttpMessageConverter converter = new MappingJackson2HttpMessageConverter(objectMapper());
         converter.registerObjectMappersForType(OrderDto.class, m -> m.put(MediaType.APPLICATION_JSON, objectMapper()));
+        converter.registerObjectMappersForType(IdDto.class, m -> m.put(MediaType.APPLICATION_JSON, objectMapper()));
+        converter.registerObjectMappersForType(ItemsDto.class, m -> m.put(MediaType.APPLICATION_JSON, objectMapper()));
+        converter.registerObjectMappersForType(ExOrderStatusDto.class, m -> m.put(MediaType.APPLICATION_JSON, objectMapper()));
         converters.add(converter);
     }
 
@@ -42,6 +46,10 @@ public class WebConfig extends WebMvcConfigurationSupport {
         registry.addConverter(new ClientClientDto());
         registry.addConverter(new OrderOrderDto());
         registry.addConverter(new OrderDtoOrder());
+        registry.addConverter(new OrderAcceptedOrderDto());
+        registry.addConverter(new OrderItemOrderItemDto());
+        registry.addConverter(new OrderItemDtoOrderItem());
+        registry.addConverter(new OrderStatusOrderStatusDto());
         super.addFormatters(registry);
     }
 }
