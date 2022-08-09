@@ -1,9 +1,6 @@
 package org.itentika.edu.spuzakov.mvc.persistence.domain;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
 import javax.persistence.*;
@@ -11,6 +8,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Builder
+@ToString
 @AllArgsConstructor
 @NoArgsConstructor
 @Data
@@ -49,9 +47,9 @@ public class Order {
     @JoinColumn(name = "administrator_id")
     private Staff administrator;
 
-    @OneToMany(mappedBy = "order")
+    @OneToMany(mappedBy = "order", cascade = {CascadeType.MERGE, CascadeType.PERSIST})
     private List<OrderStatus> orderHistory;
 
-    @OneToMany(mappedBy = "order")
+    @OneToMany(mappedBy = "order", cascade = {CascadeType.MERGE, CascadeType.PERSIST})
     private List<OrderItem> orderItem;
 }

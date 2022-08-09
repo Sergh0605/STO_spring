@@ -1,13 +1,11 @@
 package org.itentika.edu.spuzakov.mvc.persistence.domain;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import javax.persistence.*;
 
 @Builder
+@ToString
 @AllArgsConstructor
 @NoArgsConstructor
 @Data
@@ -25,10 +23,11 @@ public class OrderItem {
     @Column(name = "cost")
     private Long cost;
 
-    @ManyToOne
+    @ManyToOne(cascade = {CascadeType.MERGE, CascadeType.PERSIST})
     @JoinColumn(name = "item_id", nullable = false)
     private PriceItem priceItem;
 
+    @ToString.Exclude
     @ManyToOne
     @JoinColumn(name = "order_id", nullable = false)
     private Order order;

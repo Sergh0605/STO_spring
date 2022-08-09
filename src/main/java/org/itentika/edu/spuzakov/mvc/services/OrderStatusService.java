@@ -20,12 +20,12 @@ public class OrderStatusService {
 
     @Transactional
     public void newStatus(Order order, Status status, String comment) {
-        OrderStatus newOrder = OrderStatus.builder()
+        OrderStatus newStatus = OrderStatus.builder()
                 .order(order)
                 .status(status)
                 .comment(comment)
                 .build();
-        orderStatusRepository.save(newOrder);
+        orderStatusRepository.saveAndFlush(newStatus);
     }
 
     public OrderStatusDto getLastStatus(Long orderId) {

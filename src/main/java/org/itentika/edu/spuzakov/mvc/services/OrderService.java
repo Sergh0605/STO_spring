@@ -14,7 +14,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
@@ -25,7 +28,7 @@ public class OrderService {
     private final ClientService clientService;
     private final StaffService staffService;
     private final OrderStatusService orderStatusService;
-    private final OrderItemService orderItemService;
+    private final PriceItemService priceItemService;
 
     public Page<OrderDto> getAllUnfinishedPaginated(Pageable pageable) {
         Page<Order> orderPage = orderRepository.findAllByEndDateOrderByBeginDate(null, pageable);
@@ -43,12 +46,21 @@ public class OrderService {
         } else {
             throw new ConversionStoException("Can't convert OrderDto to Order");
         }
+        OrderStatus newStatus = OrderStatus.builder()
+                .status(Status.NEW)
+                .createDate(LocalDateTime.now())
+                .comment("This is a new order")
+                .order(orderForCreate)
+                .build();
+        List<OrderStatus> statuses = new ArrayList<>();
+        statuses.add(newStatus);
         orderForCreate.setId(null);
         orderForCreate.setAdministrator(admin);
         orderForCreate.setClient(approvedClient);
+        orderForCreate.setOrderItem(Collections.emptyList());
+        orderForCreate.setOrderHistory(statuses);
         Order createdOrder = orderRepository.save(orderForCreate);
-        orderStatusService.newStatus(createdOrder, Status.NEW, "This is a new order");
-        return conversionService.convert(orderRepository.findById(createdOrder.getId()), OrderDto.class);
+        return conversionService.convert(createdOrder, OrderDto.class);
 
     }
 
@@ -70,11 +82,15 @@ public class OrderService {
     @Transactional
     public AcceptedOrderDto addItems(Long orderId, ItemsDto itemsDto) {
         Order order = getOrder(orderId);
-        List<OrderItem> items = itemsDto.getItems().stream().map(i -> conversionService.convert(i, OrderItem.class)).toList();
-        items.forEach(i -> i.setId(null));
-        items.forEach(i -> i.setOrder(order));
-        orderItemService.addItems(items);
-        return conversionService.convert(getOrder(orderId), AcceptedOrderDto.class);
+        List<OrderItem> items = itemsDto.getItems().stream().map(i -> conversionService.convert(i, OrderItem.class)).collect(Collectors.toList());
+        items.forEach(i -> {
+            i.setId(null);
+            i.setOrder(order);
+            i.setPriceItem(priceItemService.getPriceItem(i.getPriceItem().getId()));
+        });
+        order.setOrderItem(items);
+        orderRepository.save(order);
+        return conversionService.convert(order, AcceptedOrderDto.class);
     }
 
     @Transactional

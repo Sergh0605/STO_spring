@@ -22,12 +22,12 @@ public class OrderOrderDto implements Converter<Order, OrderDto> {
                 .beginDate(source.getBeginDate())
                 .endDate(source.getEndDate())
                 .comment(source.getComment())
-                .client(new ClientClientDto().convert(source.getClient()))
                 .orderItem(source.getOrderItem().stream()
                         .map(orderItemConverter::convert).collect(Collectors.toList()))
                 .orderHistory(source.getOrderHistory().stream()
                         .sorted(Comparator.comparing(OrderStatus::getCreateDate))
                         .map(orderStatusConverter::convert).collect(Collectors.toList()))
+                .client(new ClientClientDto().convert(source.getClient()))
                 .administrator(new StaffStaffDto().convert(source.getAdministrator()))
                 .build();
     }

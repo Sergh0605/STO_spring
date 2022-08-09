@@ -1,15 +1,13 @@
 package org.itentika.edu.spuzakov.mvc.persistence.domain;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
 
 @Builder
+@ToString
 @AllArgsConstructor
 @NoArgsConstructor
 @Data
@@ -33,6 +31,7 @@ public class OrderStatus {
     @CreationTimestamp
     private LocalDateTime createDate;
 
+    @ToString.Exclude
     @ManyToOne
     @JoinColumn(name = "order_id", nullable = false)
     private Order order;
