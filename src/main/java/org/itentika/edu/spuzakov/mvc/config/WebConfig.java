@@ -2,10 +2,7 @@ package org.itentika.edu.spuzakov.mvc.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.itentika.edu.spuzakov.mvc.converter.*;
-import org.itentika.edu.spuzakov.mvc.dto.ExOrderStatusDto;
-import org.itentika.edu.spuzakov.mvc.dto.IdDto;
-import org.itentika.edu.spuzakov.mvc.dto.ItemsDto;
-import org.itentika.edu.spuzakov.mvc.dto.OrderDto;
+import org.itentika.edu.spuzakov.mvc.dto.*;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.format.FormatterRegistry;
@@ -13,6 +10,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurationSupport;
 
 import java.text.SimpleDateFormat;
@@ -38,6 +36,7 @@ public class WebConfig extends WebMvcConfigurationSupport {
         converter.registerObjectMappersForType(IdDto.class, m -> m.put(MediaType.APPLICATION_JSON, objectMapper()));
         converter.registerObjectMappersForType(ItemsDto.class, m -> m.put(MediaType.APPLICATION_JSON, objectMapper()));
         converter.registerObjectMappersForType(ExOrderStatusDto.class, m -> m.put(MediaType.APPLICATION_JSON, objectMapper()));
+        converter.registerObjectMappersForType(ExceptionDto.class, m -> m.put(MediaType.APPLICATION_JSON, objectMapper()));
         converters.add(converter);
     }
 
@@ -51,5 +50,14 @@ public class WebConfig extends WebMvcConfigurationSupport {
         registry.addConverter(new OrderItemDtoOrderItem());
         registry.addConverter(new OrderStatusOrderStatusDto());
         super.addFormatters(registry);
+    }
+
+    @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        registry.addResourceHandler("swagger-ui.html")
+                .addResourceLocations("classpath:/META-INF/resources/");
+
+        registry.addResourceHandler("/webjars/**")
+                .addResourceLocations("classpath:/META-INF/resources/webjars/");
     }
 }
