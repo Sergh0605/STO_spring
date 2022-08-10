@@ -1,7 +1,10 @@
 package org.itentika.edu.spuzakov.mvc.services;
 
 import lombok.AllArgsConstructor;
-import org.itentika.edu.spuzakov.mvc.dto.*;
+import org.itentika.edu.spuzakov.mvc.dto.ExOrderStatusDto;
+import org.itentika.edu.spuzakov.mvc.dto.IdDto;
+import org.itentika.edu.spuzakov.mvc.dto.ItemsDto;
+import org.itentika.edu.spuzakov.mvc.dto.OrderDto;
 import org.itentika.edu.spuzakov.mvc.exception.ConversionStoException;
 import org.itentika.edu.spuzakov.mvc.exception.NotFoundStoException;
 import org.itentika.edu.spuzakov.mvc.persistence.dao.OrderRepository;
@@ -32,7 +35,14 @@ public class OrderService {
 
     public Page<OrderDto> getAllUnfinishedPaginated(Pageable pageable) {
         Page<Order> orderPage = orderRepository.findAllByEndDateOrderByBeginDate(null, pageable);
-        List<OrderDto> orderDtoList = orderPage.getContent().stream().map(o -> conversionService.convert(o, OrderDto.class)).toList();
+        List<OrderDto> orderDtoList = orderPage.getContent().stream().map(o -> {
+            OrderDto convertedOrder = conversionService.convert(o, OrderDto.class);
+            if (convertedOrder != null) {
+                return convertedOrder;
+            } else {
+                throw new ConversionStoException("Can't convert Order to OrderDto");
+            }
+        }).toList();
         return new PageImpl<>(orderDtoList, pageable, orderPage.getTotalElements());
     }
 
@@ -46,14 +56,14 @@ public class OrderService {
         } else {
             throw new ConversionStoException("Can't convert OrderDto to Order");
         }
-        OrderStatus newStatus = OrderStatus.builder()
+        OrderStatus addStatus = OrderStatus.builder()
                 .status(Status.NEW)
                 .createDate(LocalDateTime.now())
                 .comment("This is a new order")
                 .order(orderForCreate)
                 .build();
         List<OrderStatus> statuses = new ArrayList<>();
-        statuses.add(newStatus);
+        statuses.add(addStatus);
         orderForCreate.setId(null);
         orderForCreate.setAdministrator(admin);
         orderForCreate.setClient(approvedClient);
@@ -65,12 +75,12 @@ public class OrderService {
     }
 
     @Transactional
-    public AcceptedOrderDto acceptOrder(Long orderId, IdDto idForAcceptStatus) {
+    public OrderDto acceptOrder(Long orderId, IdDto idForAcceptStatus) {
         Order orderForAccept = getOrder(orderId);
         Staff master = staffService.findAcceptorById(idForAcceptStatus.getId());
         orderForAccept.setMaster(master);
-        orderStatusService.newStatus(orderForAccept, Status.ACCEPTED, "Order was accepted");
-        return conversionService.convert(orderRepository.saveAndFlush(orderForAccept), AcceptedOrderDto.class);
+        orderStatusService.addStatus(orderForAccept, Status.ACCEPTED, "Order was accepted");
+        return conversionService.convert(orderRepository.saveAndFlush(orderForAccept), OrderDto.class);
     }
 
     public Order getOrder(Long orderId) {
@@ -80,7 +90,7 @@ public class OrderService {
     }
 
     @Transactional
-    public AcceptedOrderDto addItems(Long orderId, ItemsDto itemsDto) {
+    public OrderDto addItems(Long orderId, ItemsDto itemsDto) {
         Order order = getOrder(orderId);
         List<OrderItem> items = itemsDto.getItems().stream().map(i -> conversionService.convert(i, OrderItem.class)).collect(Collectors.toList());
         items.forEach(i -> {
@@ -90,11 +100,11 @@ public class OrderService {
         });
         order.setOrderItem(items);
         orderRepository.save(order);
-        return conversionService.convert(order, AcceptedOrderDto.class);
+        return conversionService.convert(order, OrderDto.class);
     }
 
     @Transactional
-    public AcceptedOrderDto addStatus(Long orderId, ExOrderStatusDto statusDto) {
+    public OrderDto addStatus(Long orderId, ExOrderStatusDto statusDto) {
         Order order = getOrder(orderId);
         Status status;
         try {
@@ -106,18 +116,21 @@ public class OrderService {
         } catch (IllegalArgumentException e) {
             throw new NotFoundStoException(String.format("Order status type with name %s not found.", statusDto.getStatus()));
         }
-        orderStatusService.newStatus(order, status, statusDto.getComment());
-        return conversionService.convert(getOrder(orderId), AcceptedOrderDto.class);
+        orderStatusService.addStatus(order, status, statusDto.getComment());
+        return conversionService.convert(getOrder(orderId), OrderDto.class);
     }
 
     @Transactional
-    public AcceptedOrderDto update(OrderDto orderDto) {
+    public OrderDto update(OrderDto orderDto) {
         Order orderForUpdate = conversionService.convert(orderDto, Order.class);
+        if (orderForUpdate == null) {
+            throw new ConversionStoException("Can't convert OrderDto to Order");
+        }
         Order order = getOrder(orderDto.getId());
         Client approvedClient = clientService.getApprovedClient(orderForUpdate.getClient());
         order.setComment(orderForUpdate.getComment());
         order.setReason(orderForUpdate.getReason());
         order.setClient(approvedClient);
-        return conversionService.convert(orderRepository.save(order), AcceptedOrderDto.class);
+        return conversionService.convert(orderRepository.save(order), OrderDto.class);
     }
 }

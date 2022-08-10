@@ -28,4 +28,5 @@ public class ClientService {
         approvedClient.setAddress(nonApprovedClient.getAddress());
         return clientRepository.save(approvedClient);
     }
+
 }

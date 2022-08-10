@@ -2,6 +2,7 @@ package org.itentika.edu.spuzakov.mvc.converter;
 
 import lombok.NoArgsConstructor;
 import org.itentika.edu.spuzakov.mvc.dto.OrderDto;
+import org.itentika.edu.spuzakov.mvc.dto.StaffDto;
 import org.itentika.edu.spuzakov.mvc.persistence.domain.Order;
 import org.itentika.edu.spuzakov.mvc.persistence.domain.OrderStatus;
 import org.springframework.core.convert.converter.Converter;
@@ -16,6 +17,10 @@ public class OrderOrderDto implements Converter<Order, OrderDto> {
 
     @Override
     public OrderDto convert(Order source) {
+        StaffDto master = null;
+        if (source.getMaster() != null) {
+            master = new StaffStaffDto().convert(source.getMaster());
+        }
         return OrderDto.builder()
                 .id(source.getId())
                 .reason(source.getReason())
@@ -28,6 +33,7 @@ public class OrderOrderDto implements Converter<Order, OrderDto> {
                         .sorted(Comparator.comparing(OrderStatus::getCreateDate))
                         .map(orderStatusConverter::convert).collect(Collectors.toList()))
                 .client(new ClientClientDto().convert(source.getClient()))
+                .master(master)
                 .administrator(new StaffStaffDto().convert(source.getAdministrator()))
                 .build();
     }

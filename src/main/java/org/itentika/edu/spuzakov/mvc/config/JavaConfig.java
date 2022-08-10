@@ -53,7 +53,8 @@ public class JavaConfig {
 
     @DependsOn("liquibase")
     @Bean(name = "entityManagerFactory")
-    public LocalContainerEntityManagerFactoryBean entityManagerFactory(@Qualifier("embeddedDataSource") DataSource dataSource) {
+    public LocalContainerEntityManagerFactoryBean entityManagerFactory(@Qualifier("embeddedDataSource") DataSource dataSource,
+                                                                       @Value("${sta.datasource.dialect}") String dialect) {
         LocalContainerEntityManagerFactoryBean em = new LocalContainerEntityManagerFactoryBean();
         em.setDataSource(dataSource);
         em.setPackagesToScan("org.itentika.edu.spuzakov.mvc.persistence.domain");
@@ -61,7 +62,7 @@ public class JavaConfig {
         //set up Spring with JPA, using Hibernate as a persistence provider
         JpaVendorAdapter vendorAdapter = new HibernateJpaVendorAdapter();
         em.setJpaVendorAdapter(vendorAdapter);
-        em.setJpaProperties(additionalProperties());
+        em.setJpaProperties(additionalProperties(dialect));
 
         return em;
     }
@@ -79,10 +80,10 @@ public class JavaConfig {
         return new PersistenceExceptionTranslationPostProcessor();
     }
 
-    Properties additionalProperties() {
+    Properties additionalProperties(String dialect) {
         Properties properties = new Properties();
         properties.setProperty("hibernate.hbm2ddl.auto", "validate");
-        properties.setProperty("hibernate.dialect", "org.hibernate.dialect.H2Dialect");
+        properties.setProperty("hibernate.dialect", dialect);
 
         return properties;
     }

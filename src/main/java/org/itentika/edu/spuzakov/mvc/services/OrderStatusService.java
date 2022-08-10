@@ -19,7 +19,7 @@ public class OrderStatusService {
     private final ConversionService conversionService;
 
     @Transactional
-    public void newStatus(Order order, Status status, String comment) {
+    public void addStatus(Order order, Status status, String comment) {
         OrderStatus newStatus = OrderStatus.builder()
                 .order(order)
                 .status(status)

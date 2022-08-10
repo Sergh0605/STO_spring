@@ -45,7 +45,6 @@ public class WebConfig extends WebMvcConfigurationSupport {
         registry.addConverter(new ClientClientDto());
         registry.addConverter(new OrderOrderDto());
         registry.addConverter(new OrderDtoOrder());
-        registry.addConverter(new OrderAcceptedOrderDto());
         registry.addConverter(new OrderItemOrderItemDto());
         registry.addConverter(new OrderItemDtoOrderItem());
         registry.addConverter(new OrderStatusOrderStatusDto());
