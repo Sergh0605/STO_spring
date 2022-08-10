@@ -1,12 +1,12 @@
 package org.itentika.edu.spuzakov.mvc.config;
 
 import liquibase.integration.spring.SpringLiquibase;
+import org.apache.commons.dbcp2.BasicDataSource;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.*;
 import org.springframework.dao.annotation.PersistenceExceptionTranslationPostProcessor;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
-import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.orm.jpa.JpaVendorAdapter;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
@@ -29,15 +29,13 @@ public class JavaConfig {
                                             @Value("${sto.datasource.driverClassName}") String driverClassName,
                                             @Value("${sto.datasource.username}") String userName,
                                             @Value("${sto.datasource.password}") String password) {
-        DriverManagerDataSource dataSource = new DriverManagerDataSource();
+        BasicDataSource dataSource = new BasicDataSource();
         dataSource.setDriverClassName(driverClassName);
         dataSource.setUrl(dataSourceUrl);
         dataSource.setUsername(userName);
         dataSource.setPassword(password);
-        Properties connectionProperties = new Properties();
-        connectionProperties.setProperty("useUnicode", "yes");
-        connectionProperties.setProperty("characterEncoding", "UTF-8");
-        dataSource.setConnectionProperties(connectionProperties);
+        dataSource.setAutoCommitOnReturn(false);
+        dataSource.setDefaultAutoCommit(false);
         return dataSource;
     }
 
