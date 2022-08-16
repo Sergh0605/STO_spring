@@ -27,11 +27,17 @@ public class OrderController {
         return ResponseEntity.ok(orderService.getAllUnfinishedPaginated(PageRequest.of(page, size)));
     }
 
+    @GetMapping(path = "/{orderId}")
+    public ResponseEntity<?> getOrder(
+            @PathVariable Long orderId) {
+        return ResponseEntity.ok(orderService.getOrderForController(orderId));
+    }
+
     @PostMapping
     public ResponseEntity<?> newOrder(
-            @RequestParam(name = "adminName", defaultValue = "Администраторов") String adminName,
+            @RequestParam(name = "adminLogin", defaultValue = "admin") String adminLogin,
             @RequestBody OrderDto order) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(orderService.create(adminName, order));
+        return ResponseEntity.status(HttpStatus.CREATED).body(orderService.create(adminLogin, order));
     }
 
     @PostMapping(path = "/{orderId}/accept")

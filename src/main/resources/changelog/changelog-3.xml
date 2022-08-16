@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.0.xsd">
+    <changeSet id="add_constraints_to_Client" author="S.Puzakov">
+        <addNotNullConstraint tableName="client" columnName="name"/>
+        <addNotNullConstraint tableName="client" columnName="phone"/>
+    </changeSet>
+    <changeSet id="add_constraints_to_order" author="S.Puzakov">
+        <addNotNullConstraint tableName="service_order" columnName="reason"/>
+        <addNotNullConstraint tableName="service_order" columnName="client_id"/>
+    </changeSet>
+    <changeSet id="set_staff_name_to_varchar" author="S.Puzakov">
+        <modifyDataType tableName="staff" columnName="name" newDataType="varchar(100)"/>
+    </changeSet>
+    <changeSet id="add_sec_columns_to_staff" author="S.Puzakov">
+        <addColumn tableName="staff">
+            <column name="login"
+                    type="varchar(100)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+        <addColumn tableName="staff">
+            <column name="password"
+                    type="varchar(100)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+        <addColumn tableName="staff">
+            <column name="role"
+                    type="varchar(100)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+    </changeSet>
+    <changeSet id="add_user_data_to_staff" author="S.Puzakov">
+        <sqlFile path="sql_scripts/insert_user_data_to_staff.sql" relativeToChangelogFile="true"/>
+    </changeSet>
+    <changeSet id="add_constraints_for_user_data_to_staff" author="S.Puzakov">
+        <addNotNullConstraint tableName="staff" columnName="login"/>
+        <addNotNullConstraint tableName="staff" columnName="password"/>
+        <addNotNullConstraint tableName="staff" columnName="role"/>
+        <addUniqueConstraint tableName="staff" columnNames="login"/>
+    </changeSet>
+</databaseChangeLog>

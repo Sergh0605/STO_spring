@@ -2,6 +2,7 @@ package org.itentika.edu.spuzakov.mvc.services;
 
 import lombok.AllArgsConstructor;
 import org.itentika.edu.spuzakov.mvc.dto.OrderStatusDto;
+import org.itentika.edu.spuzakov.mvc.exception.InvalidInputStoException;
 import org.itentika.edu.spuzakov.mvc.exception.NotFoundStoException;
 import org.itentika.edu.spuzakov.mvc.persistence.dao.OrderStatusRepository;
 import org.itentika.edu.spuzakov.mvc.persistence.domain.Order;
@@ -18,14 +19,12 @@ public class OrderStatusService {
     private final OrderStatusRepository orderStatusRepository;
     private final ConversionService conversionService;
 
-    @Transactional
-    public void addStatus(Order order, Status status, String comment) {
-        OrderStatus newStatus = OrderStatus.builder()
+    private OrderStatus constructStatus(Order order, Status status, String comment) {
+        return OrderStatus.builder()
                 .order(order)
                 .status(status)
                 .comment(comment)
                 .build();
-        orderStatusRepository.saveAndFlush(newStatus);
     }
 
     public OrderStatusDto getLastStatus(Long orderId) {
@@ -34,4 +33,23 @@ public class OrderStatusService {
         });
         return conversionService.convert(status, OrderStatusDto.class);
     }
+
+    public OrderStatus constructNewStatus(Order order) {
+        return constructStatus(order, Status.NEW, "This is a new order");
+    }
+
+    public OrderStatus constructAcceptedStatus(Order order) {
+        return constructStatus(order, Status.ACCEPTED, "Order was accepted");
+    }
+
+    public OrderStatus constructCustomStatus(Order order, String status, String comment) {
+        Status validatedStatus;
+        try {
+            validatedStatus = Status.valueOf(status);
+        } catch (IllegalArgumentException e) {
+            throw new InvalidInputStoException(String.format("Wrong Order status type with name %s.", status));
+        }
+        return constructStatus(order, validatedStatus, comment);
+    }
+
 }

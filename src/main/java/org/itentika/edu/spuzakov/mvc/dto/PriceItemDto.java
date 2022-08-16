@@ -1,15 +1,13 @@
 package org.itentika.edu.spuzakov.mvc.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
 @Builder
 public class PriceItemDto {
+    @NonNull
     private Long id;
     private String item;
     private Integer price;

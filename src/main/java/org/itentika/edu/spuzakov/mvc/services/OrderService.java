@@ -6,9 +6,11 @@ import org.itentika.edu.spuzakov.mvc.dto.IdDto;
 import org.itentika.edu.spuzakov.mvc.dto.ItemsDto;
 import org.itentika.edu.spuzakov.mvc.dto.OrderDto;
 import org.itentika.edu.spuzakov.mvc.exception.ConversionStoException;
+import org.itentika.edu.spuzakov.mvc.exception.NotEnoughRightsStoException;
 import org.itentika.edu.spuzakov.mvc.exception.NotFoundStoException;
 import org.itentika.edu.spuzakov.mvc.persistence.dao.OrderRepository;
 import org.itentika.edu.spuzakov.mvc.persistence.domain.*;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -20,7 +22,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
@@ -32,6 +33,10 @@ public class OrderService {
     private final StaffService staffService;
     private final OrderStatusService orderStatusService;
     private final PriceItemService priceItemService;
+    @Value("#{'${sto.sec.rights.acceptOrder}'.split(',')}")
+    private final List<String> acceptOrderRoles;
+    @Value("#{'${sto.sec.rights.addOrder}'.split(',')}")
+    private final List<String> addOrderRoles;
 
     public Page<OrderDto> getAllUnfinishedPaginated(Pageable pageable) {
         Page<Order> orderPage = orderRepository.findAllByEndDateOrderByBeginDate(null, pageable);
@@ -47,57 +52,67 @@ public class OrderService {
     }
 
     @Transactional
-    public OrderDto create(String adminName, OrderDto order) {
-        Staff admin = staffService.findByNameAndPositionTitle(adminName, "Администратор");
+    public OrderDto create(String login, OrderDto order) {
+        Staff admin = staffService.findByLogin(login);
+        if (!addOrderRoles.contains(admin.getRole().name())) {
+            throw new NotEnoughRightsStoException(String.format("User with login %s don't have rights to create order.", login));
+        }
         Order orderForCreate = conversionService.convert(order, Order.class);
-        Client approvedClient;
+        Client nonApprovedClient;
         if (orderForCreate != null) {
-            approvedClient = clientService.getApprovedClient(orderForCreate.getClient());
+            nonApprovedClient = orderForCreate.getClient();
         } else {
             throw new ConversionStoException("Can't convert OrderDto to Order");
         }
-        OrderStatus addStatus = OrderStatus.builder()
-                .status(Status.NEW)
-                .createDate(LocalDateTime.now())
-                .comment("This is a new order")
-                .order(orderForCreate)
-                .build();
+        Client approvedClient;
+        if (nonApprovedClient.getId() == null) {
+            approvedClient = clientService.create(nonApprovedClient);
+        } else {
+            approvedClient = clientService.getById(nonApprovedClient.getId());
+        }
         List<OrderStatus> statuses = new ArrayList<>();
-        statuses.add(addStatus);
+        statuses.add(orderStatusService.constructNewStatus(orderForCreate));
         orderForCreate.setId(null);
         orderForCreate.setAdministrator(admin);
         orderForCreate.setClient(approvedClient);
         orderForCreate.setOrderItem(Collections.emptyList());
         orderForCreate.setOrderHistory(statuses);
-        Order createdOrder = orderRepository.save(orderForCreate);
-        return conversionService.convert(createdOrder, OrderDto.class);
+        return conversionService.convert(orderRepository.save(orderForCreate), OrderDto.class);
 
     }
 
     @Transactional
     public OrderDto acceptOrder(Long orderId, IdDto idForAcceptStatus) {
         Order orderForAccept = getOrder(orderId);
-        Staff master = staffService.findAcceptorById(idForAcceptStatus.getId());
+        Staff master = staffService.findById(idForAcceptStatus.getId());
+        if (!acceptOrderRoles.contains(master.getRole().name())) {
+            throw new NotEnoughRightsStoException(String.format("User with login %s don't have rights to create order.", master.getLogin()));
+        }
         orderForAccept.setMaster(master);
-        orderStatusService.addStatus(orderForAccept, Status.ACCEPTED, "Order was accepted");
+        orderForAccept.getOrderHistory().add(orderStatusService.constructAcceptedStatus(orderForAccept));
         return conversionService.convert(orderRepository.saveAndFlush(orderForAccept), OrderDto.class);
     }
 
-    public Order getOrder(Long orderId) {
+    private Order getOrder(Long orderId) {
         return orderRepository.findById(orderId).orElseThrow(() -> {
             throw new NotFoundStoException(String.format("Order with Id %s not found", orderId));
         });
     }
 
+    public OrderDto getOrderForController(Long orderId) {
+        return conversionService.convert(getOrder(orderId), OrderDto.class);
+    }
+
     @Transactional
     public OrderDto addItems(Long orderId, ItemsDto itemsDto) {
         Order order = getOrder(orderId);
-        List<OrderItem> items = itemsDto.getItems().stream().map(i -> conversionService.convert(i, OrderItem.class)).collect(Collectors.toList());
+        List<OrderItem> items = new ArrayList<>(itemsDto.getItems().stream().map(i -> conversionService.convert(i, OrderItem.class)).toList());
         items.forEach(i -> {
             i.setId(null);
             i.setOrder(order);
             i.setPriceItem(priceItemService.getPriceItem(i.getPriceItem().getId()));
         });
+        items.addAll(order.getOrderItem());
         order.setOrderItem(items);
         orderRepository.save(order);
         return conversionService.convert(order, OrderDto.class);
@@ -106,28 +121,30 @@ public class OrderService {
     @Transactional
     public OrderDto addStatus(Long orderId, ExOrderStatusDto statusDto) {
         Order order = getOrder(orderId);
-        Status status;
-        try {
-            status = Status.valueOf(statusDto.getStatus());
-            if (status.equals(Status.DONE)) {
-                order.setEndDate(LocalDateTime.now());
-                orderRepository.save(order);
-            }
-        } catch (IllegalArgumentException e) {
-            throw new NotFoundStoException(String.format("Order status type with name %s not found.", statusDto.getStatus()));
+        OrderStatus status = orderStatusService.constructCustomStatus(order, statusDto.getStatus(), statusDto.getComment());
+        if (status.getStatus().equals(Status.DONE)) {
+            order.setEndDate(LocalDateTime.now());
         }
-        orderStatusService.addStatus(order, status, statusDto.getComment());
-        return conversionService.convert(getOrder(orderId), OrderDto.class);
+        order.getOrderHistory().add(status);
+        return conversionService.convert(orderRepository.saveAndFlush(order), OrderDto.class);
     }
 
     @Transactional
     public OrderDto update(OrderDto orderDto) {
         Order orderForUpdate = conversionService.convert(orderDto, Order.class);
-        if (orderForUpdate == null) {
+        Client nonApprovedClient;
+        if (orderForUpdate != null) {
+            nonApprovedClient = orderForUpdate.getClient();
+        } else {
             throw new ConversionStoException("Can't convert OrderDto to Order");
         }
+        Client approvedClient;
+        if (nonApprovedClient.getId() == null) {
+            approvedClient = clientService.create(nonApprovedClient);
+        } else {
+            approvedClient = clientService.update(nonApprovedClient);
+        }
         Order order = getOrder(orderDto.getId());
-        Client approvedClient = clientService.getApprovedClient(orderForUpdate.getClient());
         order.setComment(orderForUpdate.getComment());
         order.setReason(orderForUpdate.getReason());
         order.setClient(approvedClient);

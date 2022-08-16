@@ -20,7 +20,6 @@ public class Staff {
     private Long id;
 
     @Column(name = "name")
-    @Lob
     private String name;
 
     @Column(name = "phone")
@@ -29,4 +28,14 @@ public class Staff {
     @ManyToOne
     @JoinColumn(name = "position_id")
     private Position position;
+
+    @Column(name = "login")
+    private String login;
+
+    @Column(name = "password")
+    private String password;
+
+    @Column(name = "role")
+    @Enumerated(EnumType.STRING)
+    private Role role;
 }

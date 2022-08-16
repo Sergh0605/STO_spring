@@ -7,24 +7,33 @@ import org.itentika.edu.spuzakov.mvc.persistence.domain.Staff;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-
 @Service
 @AllArgsConstructor
 @Transactional(readOnly = true)
 public class StaffService {
     private final StaffRepository staffRepository;
-    private final List<String> acceptPositions = List.of("Мастер", "Старший смены", "Слесарь");
+    //а если добавим новую должность в таблицу?
+    //а если в базе будет более одного сотрудника с одинаковым именем и должностью?
 
-    public Staff findByNameAndPositionTitle(String name, String positionTitle) {
-        return staffRepository.findByNameAndPositionTitle(name, positionTitle).orElseThrow(() -> {
-            throw new NotFoundStoException(String.format("Staff with name %s and position %s not found", name, positionTitle));
+    //добавил роли и уникальные логины для персонала
+    public Staff findByLogin(String login) {
+        return staffRepository.findByLogin(login).orElseThrow(() -> {
+            throw new NotFoundStoException(String.format("Staff with login %s not found", login));
         });
     }
 
-    public Staff findAcceptorById(Long id) {
-        return staffRepository.findByIdAndPositionInList(id, acceptPositions).orElseThrow(() -> {
-            throw new NotFoundStoException(String.format("Staff with Id %s and Acceptation rights not found", id));
+    public Staff findById(Long id) {
+        /*
+         * предполагается ролевой доступ но в качестве роли сотрудника используем его должность, что логически неверно и при подключении
+         * spring security потребуется рефакторинг
+         *
+         * также возможно совпадение имени и должности (для одного сотрудника несколько должностей, либо два сотрудника с одинаковым именем и одной должностью, во всяком случае БД нас в этом никак не ограничивает)
+         * сотрудника в одной таблице и в таком случае метод работать не будет
+         */
+
+        //Поиск сотрудника по уникальному id
+        return staffRepository.findById(id).orElseThrow(() -> {
+            throw new NotFoundStoException(String.format("Staff with Id %s ", id));
         });
     }
 }

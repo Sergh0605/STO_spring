@@ -3,6 +3,8 @@ package org.itentika.edu.spuzakov.mvc.controllers;
 import lombok.extern.slf4j.Slf4j;
 import org.itentika.edu.spuzakov.mvc.dto.ExceptionDto;
 import org.itentika.edu.spuzakov.mvc.exception.ConversionStoException;
+import org.itentika.edu.spuzakov.mvc.exception.InvalidInputStoException;
+import org.itentika.edu.spuzakov.mvc.exception.NotEnoughRightsStoException;
 import org.itentika.edu.spuzakov.mvc.exception.NotFoundStoException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,11 +28,25 @@ public class GlobalControllerExceptionHandler {
             HttpRequestMethodNotSupportedException.class,
             ConversionStoException.class,
             MethodArgumentTypeMismatchException.class,
-            HttpMessageNotReadableException.class
+            HttpMessageNotReadableException.class,
+            InvalidInputStoException.class
     })
     public ResponseEntity<?> handleInvalidInputException(HttpServletRequest request, Exception e) {
         log.error("Request: " + request.getRequestURL() + " raised " + e.getMessage());
         HttpStatus errorStatus = HttpStatus.BAD_REQUEST;
+        ExceptionDto exceptionDto = ExceptionDto.builder()
+                .timestamp(LocalDateTime.now())
+                .status(errorStatus.value())
+                .error(e.getMessage())
+                .path(request.getRequestURI())
+                .build();
+        return ResponseEntity.status(errorStatus).body(exceptionDto);
+    }
+
+    @ExceptionHandler({NotEnoughRightsStoException.class})
+    public ResponseEntity<?> handleForbiddenException(HttpServletRequest request, Exception e) {
+        log.error("Request: " + request.getRequestURL() + " raised " + e.getMessage());
+        HttpStatus errorStatus = HttpStatus.FORBIDDEN;
         ExceptionDto exceptionDto = ExceptionDto.builder()
                 .timestamp(LocalDateTime.now())
                 .status(errorStatus.value())
