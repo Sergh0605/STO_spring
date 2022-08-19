@@ -19,9 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 @Service
 @AllArgsConstructor
@@ -51,24 +49,25 @@ public class OrderService {
         return new PageImpl<>(orderDtoList, pageable, orderPage.getTotalElements());
     }
 
+    //а какой уровень изоляции здесь предполагается?
+    //Isolaation.Default для H2 как и для большинства это ReadCommited
     @Transactional
     public OrderDto create(String login, OrderDto order) {
         Staff admin = staffService.findByLogin(login);
         if (!addOrderRoles.contains(admin.getRole().name())) {
             throw new NotEnoughRightsStoException(String.format("User with login %s don't have rights to create order.", login));
         }
-        Order orderForCreate = conversionService.convert(order, Order.class);
-        Client nonApprovedClient;
-        if (orderForCreate != null) {
-            nonApprovedClient = orderForCreate.getClient();
-        } else {
-            throw new ConversionStoException("Can't convert OrderDto to Order");
+        Order orderForCreate;
+        try {
+            orderForCreate = conversionService.convert(order, Order.class);
+        } catch (Exception e) {
+            throw new ConversionStoException("Can't convert OrderDto to Order", e);
         }
         Client approvedClient;
-        if (nonApprovedClient.getId() == null) {
-            approvedClient = clientService.create(nonApprovedClient);
+        if (orderForCreate.getClient().getId() == null) {
+            approvedClient = clientService.create(orderForCreate.getClient());
         } else {
-            approvedClient = clientService.getById(nonApprovedClient.getId());
+            approvedClient = clientService.getById(orderForCreate.getClient().getId());
         }
         List<OrderStatus> statuses = new ArrayList<>();
         statuses.add(orderStatusService.constructNewStatus(orderForCreate));
@@ -112,8 +111,10 @@ public class OrderService {
             i.setOrder(order);
             i.setPriceItem(priceItemService.getPriceItem(i.getPriceItem().getId()));
         });
-        items.addAll(order.getOrderItem());
-        order.setOrderItem(items);
+        ////а если 2 раза подряд сервис создания заказа вызвать? у нас задублируются items в базе?
+
+        //Items с одинаковым PriceItemId просуммируются по количеству и сумме;
+        order.setOrderItem(addWithoutDuplicates(order.getOrderItem(), items));
         orderRepository.save(order);
         return conversionService.convert(order, OrderDto.class);
     }
@@ -126,28 +127,41 @@ public class OrderService {
             order.setEndDate(LocalDateTime.now());
         }
         order.getOrderHistory().add(status);
-        return conversionService.convert(orderRepository.saveAndFlush(order), OrderDto.class);
+        Order savedOrder = orderRepository.saveAndFlush(order);
+        return conversionService.convert(savedOrder, OrderDto.class);
     }
 
     @Transactional
     public OrderDto update(OrderDto orderDto) {
-        Order orderForUpdate = conversionService.convert(orderDto, Order.class);
-        Client nonApprovedClient;
-        if (orderForUpdate != null) {
-            nonApprovedClient = orderForUpdate.getClient();
-        } else {
-            throw new ConversionStoException("Can't convert OrderDto to Order");
+        Order orderForUpdate;
+        try {
+            orderForUpdate = conversionService.convert(orderDto, Order.class);
+        } catch (Exception e) {
+            throw new ConversionStoException("Can't convert OrderDto to Order", e);
         }
         Client approvedClient;
-        if (nonApprovedClient.getId() == null) {
-            approvedClient = clientService.create(nonApprovedClient);
+        if (orderForUpdate.getClient().getId() == null) {
+            approvedClient = clientService.create(orderForUpdate.getClient());
         } else {
-            approvedClient = clientService.update(nonApprovedClient);
+            approvedClient = clientService.update(orderForUpdate.getClient());
         }
         Order order = getOrder(orderDto.getId());
         order.setComment(orderForUpdate.getComment());
         order.setReason(orderForUpdate.getReason());
         order.setClient(approvedClient);
         return conversionService.convert(orderRepository.save(order), OrderDto.class);
+    }
+
+    private List<OrderItem> addWithoutDuplicates(List<OrderItem> currentItems, List<OrderItem> newItems) {
+        Map<Long, OrderItem> uniqOrderItems = new HashMap<>();
+        currentItems.forEach(orderItem -> uniqOrderItems.put(orderItem.getPriceItem().getId(), orderItem));
+        newItems.forEach(orderItem -> uniqOrderItems.merge(orderItem.getPriceItem().getId(), orderItem, (oldItem, newItem) ->
+                {
+                    oldItem.setCost(oldItem.getCost() + newItem.getCost());
+                    oldItem.setQuantity(oldItem.getQuantity() + newItem.getQuantity());
+                    return oldItem;
+                }
+        ));
+        return new ArrayList<>(uniqOrderItems.values());
     }
 }

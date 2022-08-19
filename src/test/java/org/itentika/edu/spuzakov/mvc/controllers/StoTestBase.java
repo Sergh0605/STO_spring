@@ -7,9 +7,16 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.itentika.edu.spuzakov.mvc.dto.*;
+import org.itentika.edu.spuzakov.mvc.persistence.dao.OrderRepository;
+import org.itentika.edu.spuzakov.mvc.persistence.dao.StaffRepository;
+import org.itentika.edu.spuzakov.mvc.services.ClientService;
+import org.itentika.edu.spuzakov.mvc.services.OrderStatusService;
+import org.itentika.edu.spuzakov.mvc.services.StaffService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.convert.ConversionService;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
@@ -33,6 +40,21 @@ public class StoTestBase {
     private WebApplicationContext webApplicationContext;
     @Autowired
     private DataSource dataSource;
+    @Autowired
+    protected ConversionService conversionService;
+    @Autowired
+    protected OrderRepository orderRepository;
+    @Autowired
+    protected ClientService clientService;
+    @Autowired
+    protected StaffRepository staffRepository;
+    @Autowired
+    protected StaffService staffService;
+    @Autowired
+    protected OrderStatusService orderStatusService;
+    @Value("#{'${sto.sec.rights.addOrder}'.split(',')}")
+    protected List<String> addOrderRoles;
+
     public static final MediaType APPLICATION_JSON_UTF8 = new MediaType(MediaType.APPLICATION_JSON.getType(), MediaType.APPLICATION_JSON.getSubtype(), StandardCharsets.UTF_8);
     protected MockMvc mockMvc;
 
@@ -119,5 +141,11 @@ public class StoTestBase {
             stmt.executeUpdate(initSql);
             connection.commit();
         }
+    }
+
+    protected long countUniqueItems(List<OrderItemDto> currentItems, List<OrderItemDto> newItems) {
+        List<OrderItemDto> allItems = new ArrayList<>(currentItems);
+        allItems.addAll(newItems);
+        return allItems.stream().map(i -> i.getPriceItem().getId()).distinct().count();
     }
 }

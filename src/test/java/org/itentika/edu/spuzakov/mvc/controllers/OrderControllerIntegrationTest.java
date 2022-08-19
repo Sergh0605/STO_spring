@@ -12,6 +12,8 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.context.web.WebAppConfiguration;
 
+import java.util.Collections;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -60,21 +62,50 @@ public class OrderControllerIntegrationTest extends StoTestBase {
     }
 
     @Test
-    public void givenOrderIdAndItems_whenAddItems_thenVerifyResponse() throws Exception {
+    public void givenOrderIdAndItems_whenAddItemsToEmptyOrder_thenVerifyResponse() throws Exception {
         Long orderId = getIdOfNewOrder();
         ItemsDto items = getItems();
-
-        String order = this.mockMvc
-                .perform(get("/api/order/" + orderId))
-                .andReturn().getResponse().getContentAsString();
-        int orderItemCount = getOrderDto(order).getOrderItem().size();
 
         this.mockMvc
                 .perform(post("/api/order/{orderId}/items", orderId)
                         .contentType(APPLICATION_JSON_UTF8)
                         .content(getJSON(items)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.orderItem.length()").value(items.getItems().size() + orderItemCount));
+                .andExpect(jsonPath("$.orderItem.length()").value(items.getItems().size()));
+    }
+
+    @Test
+    public void givenOrderIdAndItems_whenAddDoubledItemsToEmptyOrder_thenVerifyResponse() throws Exception {
+        Long orderId = getIdOfNewOrder();
+        ItemsDto items = getItems();
+        items.getItems().get(0).getPriceItem().setId(2L);
+        long itemsCount = countUniqueItems(items.getItems(), Collections.emptyList());
+        this.mockMvc
+                .perform(post("/api/order/{orderId}/items", orderId)
+                        .contentType(APPLICATION_JSON_UTF8)
+                        .content(getJSON(items)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.orderItem.length()").value(itemsCount));
+    }
+
+    @Test
+    public void givenOrderIdAndItems_whenAddItemsToOrderWithOtherItems_thenVerifyResponse() throws Exception {
+        Long orderId = getIdOfNewOrder();
+        ItemsDto oldItems = getItems();
+        ItemsDto newItems = getItems();
+        newItems.getItems().get(0).getPriceItem().setId(7L);
+        long itemsCount = countUniqueItems(oldItems.getItems(), newItems.getItems());
+        this.mockMvc
+                .perform(post("/api/order/{orderId}/items", orderId)
+                        .contentType(APPLICATION_JSON_UTF8)
+                        .content(getJSON(oldItems)));
+
+        this.mockMvc
+                .perform(post("/api/order/{orderId}/items", orderId)
+                        .contentType(APPLICATION_JSON_UTF8)
+                        .content(getJSON(newItems)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.orderItem.length()").value(itemsCount));
     }
 
     @Test

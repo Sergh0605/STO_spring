@@ -19,6 +19,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ContextConfiguration(classes = {JavaConfig.class})
 @WebAppConfiguration
 public class OrderControllerFailureIntegrationTest extends StoTestBase {
+
     @Test
     public void givenNewOrderJSON_whenCreateOrderByUserWithoutAdminRole_then403() throws Exception {
         Order newOrder = Order.builder()
