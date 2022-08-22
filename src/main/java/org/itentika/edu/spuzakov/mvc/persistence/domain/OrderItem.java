@@ -8,7 +8,8 @@ import javax.persistence.*;
 @ToString
 @AllArgsConstructor
 @NoArgsConstructor
-@Data
+@Getter
+@Setter
 @Entity
 @Table(name = "order_item")
 public class OrderItem {

@@ -20,7 +20,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @AllArgsConstructor
@@ -36,6 +38,7 @@ public class OrderService {
     private final List<String> acceptOrderRoles;
     @Value("#{'${sto.sec.rights.addOrder}'.split(',')}")
     private final List<String> addOrderRoles;
+    private final Integer duplicationDayLimit = 1;
 
     public Page<OrderDto> getAllUnfinishedPaginated(Pageable pageable) {
         Page<Order> orderPage = orderRepository.findAllByEndDateOrderByBeginDate(null, pageable);
@@ -61,8 +64,8 @@ public class OrderService {
         Order orderForCreate;
         try {
             orderForCreate = conversionService.convert(order, Order.class);
-            orderForCreate.setOrderHistory(new ArrayList<>());
-            orderForCreate.setOrderItem(new ArrayList<>());
+            orderForCreate.setOrderHistory(new HashSet<>());
+            orderForCreate.setOrderItem(new HashSet<>());
         } catch (Exception e) {
             throw new ConversionStoException("Can't convert OrderDto to Order", e);
         }
@@ -82,7 +85,8 @@ public class OrderService {
         orderForCreate.setAdministrator(admin);
         orderForCreate.setClient(approvedClient);
         orderForCreate.addStatus(orderStatusService.constructNewStatus());
-        return conversionService.convert(orderRepository.save(orderForCreate), OrderDto.class);
+        Order savedOrder = orderRepository.save(orderForCreate);
+        return conversionService.convert(savedOrder, OrderDto.class);
 
     }
 
@@ -95,8 +99,8 @@ public class OrderService {
         }
         orderForAccept.setMaster(master);
         orderForAccept.addStatus(orderStatusService.constructAcceptedStatus());
-        //а почему не просто save?
-        return conversionService.convert(orderRepository.saveAndFlush(orderForAccept), OrderDto.class);
+        Order savedOrder = orderRepository.save(orderForAccept);
+        return conversionService.convert(savedOrder, OrderDto.class);
     }
 
     private Order getOrder(Long orderId) {
@@ -118,9 +122,10 @@ public class OrderService {
             i.setPriceItem(priceItemService.getPriceItem(i.getPriceItem().getId()));
             ////а если 2 раза подряд сервис создания заказа вызвать? у нас задублируются items в базе?
             //Items с одинаковым PriceItemId просуммируются по количеству и сумме;
-            order.addItem(i);
+            addItemWhithoutDuplication(order, i);
         });
-        return conversionService.convert(orderRepository.save(order), OrderDto.class);
+        Order savedOrder = orderRepository.save(order);
+        return conversionService.convert(savedOrder, OrderDto.class);
     }
 
     @Transactional
@@ -131,8 +136,8 @@ public class OrderService {
             order.setEndDate(LocalDateTime.now());
         }
         order.addStatus(status);
-        //а почему не просто save?
-        return conversionService.convert(orderRepository.saveAndFlush(order), OrderDto.class);
+        Order savedOrder = orderRepository.save(order);
+        return conversionService.convert(savedOrder, OrderDto.class);
     }
 
     //а какой уровень изоляции здесь предполагается?
@@ -155,12 +160,27 @@ public class OrderService {
         order.setComment(orderForUpdate.getComment());
         order.setReason(orderForUpdate.getReason());
         order.setClient(approvedClient);
-        return conversionService.convert(orderRepository.save(order), OrderDto.class);
+        Order savedOrder = orderRepository.save(order);
+        return conversionService.convert(savedOrder, OrderDto.class);
     }
 
     private List<Order> getDuplicateOrders(Order order) {
         //заказы с одинаковыми reason, client_id, созданные в течение суток считаются дубликатами
-        LocalDateTime duplicationTimeLimit = LocalDateTime.now().minusDays(1L);
+        LocalDateTime duplicationTimeLimit = LocalDateTime.now().minusDays(duplicationDayLimit);
         return orderRepository.getAllByReasonAndClient_IdAndBeginDateAfterOrderByBeginDate(order.getReason(), order.getClient().getId(), duplicationTimeLimit);
+    }
+
+    private void addItemWhithoutDuplication(Order order, OrderItem item) {
+        boolean duplicatesFound = false;
+        for (OrderItem currentItem : order.getOrderItem()) {
+            if (Objects.equals(currentItem.getPriceItem().getId(), item.getPriceItem().getId())) {
+                duplicatesFound = true;
+                currentItem.setCost(currentItem.getCost() + item.getCost());
+                currentItem.setQuantity(currentItem.getQuantity() + item.getQuantity());
+            }
+        }
+        if (!duplicatesFound) {
+            order.addItem(item);
+        }
     }
 }

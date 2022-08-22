@@ -10,7 +10,8 @@ import java.time.LocalDateTime;
 @ToString
 @AllArgsConstructor
 @NoArgsConstructor
-@Data
+@Getter
+@Setter
 @Entity
 @Table(name = "order_status")
 public class OrderStatus {
@@ -34,16 +35,4 @@ public class OrderStatus {
     @ToString.Exclude
     @ManyToOne(fetch = FetchType.LAZY)
     private Order order;
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof OrderStatus)) return false;
-        return id != null && id.equals(((OrderStatus) o).getId());
-    }
-
-    @Override
-    public int hashCode() {
-        return getClass().hashCode();
-    }
 }
