@@ -81,7 +81,7 @@ public class StoTestBase {
         return mapper.readValue(json, OrderDto.class);
     }
 
-    protected Long getIdOfNewOrder() throws Exception {
+    protected OrderDto createNewOrder() throws Exception {
         OrderDto newOrder = OrderDto.builder()
                 .reason("Test reason")
                 .comment("Test comment")
@@ -99,7 +99,7 @@ public class StoTestBase {
                 .addModule(new JavaTimeModule())
                 .build();
         OrderDto order = mapper.readValue(result.getResponse().getContentAsString(), OrderDto.class);
-        return order.getId();
+        return order;
     }
 
     protected ItemsDto getItems() {

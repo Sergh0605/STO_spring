@@ -19,7 +19,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 @AllArgsConstructor
@@ -50,7 +51,7 @@ public class OrderService {
     }
 
     //а какой уровень изоляции здесь предполагается?
-    //Isolaation.Default для H2 как и для большинства это ReadCommited
+    //Isolation.Default для H2 как и для большинства это ReadCommitted
     @Transactional
     public OrderDto create(String login, OrderDto order) {
         Staff admin = staffService.findByLogin(login);
@@ -60,6 +61,8 @@ public class OrderService {
         Order orderForCreate;
         try {
             orderForCreate = conversionService.convert(order, Order.class);
+            orderForCreate.setOrderHistory(new ArrayList<>());
+            orderForCreate.setOrderItem(new ArrayList<>());
         } catch (Exception e) {
             throw new ConversionStoException("Can't convert OrderDto to Order", e);
         }
@@ -67,15 +70,18 @@ public class OrderService {
         if (orderForCreate.getClient().getId() == null) {
             approvedClient = clientService.create(orderForCreate.getClient());
         } else {
-            approvedClient = clientService.getById(orderForCreate.getClient().getId());
+            List<Order> duplicatedOrders = getDuplicateOrders(orderForCreate);
+            if (duplicatedOrders.size() == 0) {
+                approvedClient = clientService.getById(orderForCreate.getClient().getId());
+            } else {
+                //если в БД есть дублирующий заказ - возвращаем его
+                return conversionService.convert(duplicatedOrders.get(0), OrderDto.class);
+            }
         }
-        List<OrderStatus> statuses = new ArrayList<>();
-        statuses.add(orderStatusService.constructNewStatus(orderForCreate));
         orderForCreate.setId(null);
         orderForCreate.setAdministrator(admin);
         orderForCreate.setClient(approvedClient);
-        orderForCreate.setOrderItem(Collections.emptyList());
-        orderForCreate.setOrderHistory(statuses);
+        orderForCreate.addStatus(orderStatusService.constructNewStatus());
         return conversionService.convert(orderRepository.save(orderForCreate), OrderDto.class);
 
     }
@@ -88,7 +94,8 @@ public class OrderService {
             throw new NotEnoughRightsStoException(String.format("User with login %s don't have rights to create order.", master.getLogin()));
         }
         orderForAccept.setMaster(master);
-        orderForAccept.getOrderHistory().add(orderStatusService.constructAcceptedStatus(orderForAccept));
+        orderForAccept.addStatus(orderStatusService.constructAcceptedStatus());
+        //а почему не просто save?
         return conversionService.convert(orderRepository.saveAndFlush(orderForAccept), OrderDto.class);
     }
 
@@ -108,29 +115,28 @@ public class OrderService {
         List<OrderItem> items = new ArrayList<>(itemsDto.getItems().stream().map(i -> conversionService.convert(i, OrderItem.class)).toList());
         items.forEach(i -> {
             i.setId(null);
-            i.setOrder(order);
             i.setPriceItem(priceItemService.getPriceItem(i.getPriceItem().getId()));
+            ////а если 2 раза подряд сервис создания заказа вызвать? у нас задублируются items в базе?
+            //Items с одинаковым PriceItemId просуммируются по количеству и сумме;
+            order.addItem(i);
         });
-        ////а если 2 раза подряд сервис создания заказа вызвать? у нас задублируются items в базе?
-
-        //Items с одинаковым PriceItemId просуммируются по количеству и сумме;
-        order.setOrderItem(addWithoutDuplicates(order.getOrderItem(), items));
-        orderRepository.save(order);
-        return conversionService.convert(order, OrderDto.class);
+        return conversionService.convert(orderRepository.save(order), OrderDto.class);
     }
 
     @Transactional
     public OrderDto addStatus(Long orderId, ExOrderStatusDto statusDto) {
         Order order = getOrder(orderId);
-        OrderStatus status = orderStatusService.constructCustomStatus(order, statusDto.getStatus(), statusDto.getComment());
+        OrderStatus status = orderStatusService.constructCustomStatus(statusDto.getStatus(), statusDto.getComment());
         if (status.getStatus().equals(Status.DONE)) {
             order.setEndDate(LocalDateTime.now());
         }
-        order.getOrderHistory().add(status);
-        Order savedOrder = orderRepository.saveAndFlush(order);
-        return conversionService.convert(savedOrder, OrderDto.class);
+        order.addStatus(status);
+        //а почему не просто save?
+        return conversionService.convert(orderRepository.saveAndFlush(order), OrderDto.class);
     }
 
+    //а какой уровень изоляции здесь предполагается?
+    //Isolation.Default для H2 как и для большинства это ReadCommitted
     @Transactional
     public OrderDto update(OrderDto orderDto) {
         Order orderForUpdate;
@@ -152,16 +158,9 @@ public class OrderService {
         return conversionService.convert(orderRepository.save(order), OrderDto.class);
     }
 
-    private List<OrderItem> addWithoutDuplicates(List<OrderItem> currentItems, List<OrderItem> newItems) {
-        Map<Long, OrderItem> uniqOrderItems = new HashMap<>();
-        currentItems.forEach(orderItem -> uniqOrderItems.put(orderItem.getPriceItem().getId(), orderItem));
-        newItems.forEach(orderItem -> uniqOrderItems.merge(orderItem.getPriceItem().getId(), orderItem, (oldItem, newItem) ->
-                {
-                    oldItem.setCost(oldItem.getCost() + newItem.getCost());
-                    oldItem.setQuantity(oldItem.getQuantity() + newItem.getQuantity());
-                    return oldItem;
-                }
-        ));
-        return new ArrayList<>(uniqOrderItems.values());
+    private List<Order> getDuplicateOrders(Order order) {
+        //заказы с одинаковыми reason, client_id, созданные в течение суток считаются дубликатами
+        LocalDateTime duplicationTimeLimit = LocalDateTime.now().minusDays(1L);
+        return orderRepository.getAllByReasonAndClient_IdAndBeginDateAfterOrderByBeginDate(order.getReason(), order.getClient().getId(), duplicationTimeLimit);
     }
 }

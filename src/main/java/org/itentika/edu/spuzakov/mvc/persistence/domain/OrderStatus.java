@@ -32,7 +32,18 @@ public class OrderStatus {
     private LocalDateTime createDate;
 
     @ToString.Exclude
-    @ManyToOne
-    @JoinColumn(name = "order_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
     private Order order;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof OrderStatus)) return false;
+        return id != null && id.equals(((OrderStatus) o).getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
+    }
 }

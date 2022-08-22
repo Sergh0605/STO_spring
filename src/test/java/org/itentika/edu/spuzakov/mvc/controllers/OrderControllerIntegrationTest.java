@@ -4,6 +4,7 @@ import org.itentika.edu.spuzakov.mvc.config.JavaConfig;
 import org.itentika.edu.spuzakov.mvc.dto.ExOrderStatusDto;
 import org.itentika.edu.spuzakov.mvc.dto.IdDto;
 import org.itentika.edu.spuzakov.mvc.dto.ItemsDto;
+import org.itentika.edu.spuzakov.mvc.dto.OrderDto;
 import org.itentika.edu.spuzakov.mvc.persistence.domain.Client;
 import org.itentika.edu.spuzakov.mvc.persistence.domain.Order;
 import org.junit.jupiter.api.Test;
@@ -23,7 +24,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebAppConfiguration
 public class OrderControllerIntegrationTest extends StoTestBase {
     @Test
-    public void givenNewOrderJSON_whenCreateOrder_thenVerifyResponse() throws Exception {
+    public void givenNewOrder_whenCreateOrder_thenVerifyResponse() throws Exception {
         Order newOrder = Order.builder()
                 .reason("Test reason")
                 .comment("Test comment")
@@ -46,8 +47,30 @@ public class OrderControllerIntegrationTest extends StoTestBase {
     }
 
     @Test
+    public void givenDuplicatedOrder_whenCreateOrder_thenVerifyResponse() throws Exception {
+        OrderDto oldOrder = createNewOrder();
+        OrderDto duplicatedOrder = OrderDto.builder()
+                .reason(oldOrder.getReason())
+                .comment("New comment")
+                .client(oldOrder.getClient())
+                .build();
+
+        this.mockMvc
+                .perform(post("/api/order")
+                        .param("adminLogin", "admin")
+                        .contentType(APPLICATION_JSON_UTF8)
+                        .content(getJSON(duplicatedOrder)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(oldOrder.getId()))
+                .andExpect(jsonPath("$.reason").value(duplicatedOrder.getReason()))
+                .andExpect(jsonPath("$.client.id").value(oldOrder.getClient().getId()))
+                .andExpect(jsonPath("$.administrator.name").value("Администраторов"))
+                .andExpect(jsonPath("$.orderHistory.length()").value(1));
+    }
+
+    @Test
     public void givenOrderIdAndMasterId_whenAcceptOrder_thenVerifyResponse() throws Exception {
-        Long orderId = getIdOfNewOrder();
+        Long orderId = createNewOrder().getId();
         IdDto idDto = IdDto.builder()
                 .id(2L)
                 .build();
@@ -63,7 +86,7 @@ public class OrderControllerIntegrationTest extends StoTestBase {
 
     @Test
     public void givenOrderIdAndItems_whenAddItemsToEmptyOrder_thenVerifyResponse() throws Exception {
-        Long orderId = getIdOfNewOrder();
+        Long orderId = createNewOrder().getId();
         ItemsDto items = getItems();
 
         this.mockMvc
@@ -76,7 +99,7 @@ public class OrderControllerIntegrationTest extends StoTestBase {
 
     @Test
     public void givenOrderIdAndItems_whenAddDoubledItemsToEmptyOrder_thenVerifyResponse() throws Exception {
-        Long orderId = getIdOfNewOrder();
+        Long orderId = createNewOrder().getId();
         ItemsDto items = getItems();
         items.getItems().get(0).getPriceItem().setId(2L);
         long itemsCount = countUniqueItems(items.getItems(), Collections.emptyList());
@@ -90,7 +113,7 @@ public class OrderControllerIntegrationTest extends StoTestBase {
 
     @Test
     public void givenOrderIdAndItems_whenAddItemsToOrderWithOtherItems_thenVerifyResponse() throws Exception {
-        Long orderId = getIdOfNewOrder();
+        Long orderId = createNewOrder().getId();
         ItemsDto oldItems = getItems();
         ItemsDto newItems = getItems();
         newItems.getItems().get(0).getPriceItem().setId(7L);
@@ -110,7 +133,7 @@ public class OrderControllerIntegrationTest extends StoTestBase {
 
     @Test
     public void givenNewOrder_whenAddStatus_thenVerifyResponse() throws Exception {
-        Long orderId = getIdOfNewOrder();
+        Long orderId = createNewOrder().getId();
         ExOrderStatusDto status = ExOrderStatusDto.builder()
                 .status("DONE")
                 .comment("Ready")
@@ -126,7 +149,7 @@ public class OrderControllerIntegrationTest extends StoTestBase {
 
     @Test
     public void givenOrderWithDoneStatusA_whenGetCurrentStatus_thenVerify() throws Exception {
-        Long orderId = getIdOfNewOrder();
+        Long orderId = createNewOrder().getId();
         ExOrderStatusDto status = ExOrderStatusDto.builder()
                 .status("DONE")
                 .comment("Ready")
@@ -146,7 +169,7 @@ public class OrderControllerIntegrationTest extends StoTestBase {
 
     @Test
     public void givenNewOrder_whenChangeOrderFields_thenVerify() throws Exception {
-        Long orderId = getIdOfNewOrder();
+        Long orderId = createNewOrder().getId();
         Order changedOrder = Order.builder()
                 .id(orderId)
                 .reason("Changed Test reason")

@@ -28,7 +28,6 @@ public class OrderItem {
     private PriceItem priceItem;
 
     @ToString.Exclude
-    @ManyToOne
-    @JoinColumn(name = "order_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
     private Order order;
 }

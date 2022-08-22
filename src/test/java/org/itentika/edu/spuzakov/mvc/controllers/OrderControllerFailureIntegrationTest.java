@@ -60,7 +60,7 @@ public class OrderControllerFailureIntegrationTest extends StoTestBase {
 
     @Test
     public void givenOrderIdAndUserWithoutAcceptRole_whenAcceptOrder_then403() throws Exception {
-        Long orderId = getIdOfNewOrder();
+        Long orderId = createNewOrder().getId();
         IdDto idDto = IdDto.builder()
                 .id(6L)
                 .build();
@@ -74,7 +74,7 @@ public class OrderControllerFailureIntegrationTest extends StoTestBase {
 
     @Test
     public void givenOrderIdAndItemsWithWrongPriceItemId_whenAddItems_then404() throws Exception {
-        Long orderId = getIdOfNewOrder();
+        Long orderId = createNewOrder().getId();
         ItemsDto items = getItems();
         items.getItems().get(0).getPriceItem().setId(50L);
 
@@ -87,7 +87,7 @@ public class OrderControllerFailureIntegrationTest extends StoTestBase {
 
     @Test
     public void givenNewOrder_whenAddWrongStatus_then400() throws Exception {
-        Long orderId = getIdOfNewOrder();
+        Long orderId = createNewOrder().getId();
         ExOrderStatusDto status = ExOrderStatusDto.builder()
                 .status("READY")
                 .comment("Ready")
